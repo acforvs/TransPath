@@ -30,8 +30,8 @@ def adv_loss(criterion, na_outputs, va_outputs):
 
 class Autoencoder(pl.LightningModule):
     def __init__(self, 
-                in_channels=2, 
-                out_channels=1, 
+                in_channels=8, 
+                out_channels=4,  
                 hidden_channels=64,
                 attn_blocks=4,
                 attn_heads=4,
@@ -81,6 +81,9 @@ class Autoencoder(pl.LightningModule):
         map_design, start, goal, gt_hmap = batch
         inputs = torch.cat([map_design, start + goal], dim=1) if self.mode in ('f', 'nastar') else torch.cat([map_design, goal], dim=1)
         predictions = self(inputs)
+
+        # костыль
+        gt_hmap = gt_hmap.to(predictions.dtype)
 
         loss = self.recon_criterion((predictions + 1) / 2 * self.k, gt_hmap)
         self.log(f'{regime}_recon_loss', loss, on_step=False, on_epoch=True)
@@ -169,9 +172,21 @@ class PathLogger(pl.Callback):
         if pl_module.mode == 'h':
             prediction = prediction * 64 * 64
 
+        data_dict = {}
+        data = torch.cat([self.val_samples, self.hm], dim=1)
+        for i in range(4):
+            key = f"data_{i}"
+            data_dict[key] = [wandb.Image(x) for x in data[:, i, :, :]]
+
+        preds_dict = {}
+        preds = torch.cat([val_samples, prediction], dim=1)
+        for i in range(4):
+            key = f"predictions_{i}"
+            preds_dict[key] = [wandb.Image(x) for x in preds[:, i, :, :]]
+
         trainer.logger.experiment.log({
-            'data': [wandb.Image(x) for x in torch.cat([self.val_samples, self.hm], dim=1)],
-            'predictions': [wandb.Image(x) for x in torch.cat([val_samples, prediction], dim=1)]
+            'data': data_dict,
+            'predictions': preds_dict,
         })
 
 class DemPathLogger(pl.Callback):

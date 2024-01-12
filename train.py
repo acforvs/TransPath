@@ -14,11 +14,11 @@ import multiprocessing
 
 def main(mode, run_name, proj_name, batch_size, max_epochs):
     train_data = GridData(
-        path='./TransPath_data/train',
+        path='./TransPath_data_theta/train',
         mode=mode
     ) if mode != 'dem' else DemData(split='train')
     val_data = GridData(
-        path='./TransPath_data/val',
+        path='./TransPath_data_theta/val',
         mode=mode
     ) if mode != 'dem' else DemData(split='val')
     resolution = (train_data.img_size, train_data.img_size)
@@ -46,11 +46,12 @@ def main(mode, run_name, proj_name, batch_size, max_epochs):
         callbacks=[callback],
     )
     trainer.fit(model, train_dataloader, val_dataloader)
+    trainer.save_checkpoint("theta-transpath-end.pth")
     wandb.finish()
-    
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, choices=['f', 'cf', 'dem'], default='dem')
+    parser.add_argument('--mode', type=str, choices=['f', 'cf', 'dem'], default='f')
     parser.add_argument('--run_name', type=str, default='default')
     parser.add_argument('--proj_name', type=str, default='TransPath_runs')
     parser.add_argument('--seed', type=int, default=39)
